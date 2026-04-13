@@ -7,8 +7,9 @@ DerivedDataCache/
 Intermediate/
 Saved/
 
-# Visual Studio / VS Code
+# Visual Studio / VS Code / Rider
 .vscode/
+.idea/
 .vs/
 *.VC.db
 *.opensdf
