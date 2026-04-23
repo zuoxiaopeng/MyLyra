@@ -53,6 +53,9 @@ struct FSharedRepMovement
 
 	UPROPERTY(Transient)
 	uint8 RepMovementMode = 0;
+	
+	UPROPERTY(Transient)
+	bool bProxyIsJumpForceApplied = false;
 
 	UPROPERTY(Transient)
 	bool bIsCrouched = false;
@@ -191,3 +194,5 @@ private:
 	UFUNCTION()
 	UE_API void OnRep_MyTeamID(FGenericTeamId OldTeamID);
 };
+
+#undef UE_API

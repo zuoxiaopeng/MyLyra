@@ -1,11 +1,39 @@
 #include "LyraCharacter.h"
 
+#include "GameFramework/CharacterMovementComponent.h"
+
 FSharedRepMovement::FSharedRepMovement()
 {
+	RepMovement.LocationQuantizationLevel = EVectorQuantization::RoundTwoDecimals;
 }
 
 bool FSharedRepMovement::FillForCharacter(ACharacter* Character)
 {
+	if (USceneComponent* PawnRootComponent = Character->GetRootComponent())
+	{
+		UCharacterMovementComponent* CharacterMovement = Character->GetCharacterMovement();
+		
+		// 大世界中离世界原点过远时，浮点数精度会下降(float，导致物理抖动以及渲染破面
+		// 为此引入世界原点平移（World Origin Rebasing）
+		// 服务器使用FRepMovement::RebaseOntoZeroOrigin统一原点
+		RepMovement.Location = FRepMovement::RebaseOntoZeroOrigin(PawnRootComponent->GetComponentLocation(), Character);
+		RepMovement.Rotation = PawnRootComponent->GetComponentRotation();
+		RepMovement.LinearVelocity = CharacterMovement->Velocity;
+		RepMovementMode = CharacterMovement->PackNetworkMovementMode();
+		bProxyIsJumpForceApplied = Character->GetProxyIsJumpForceApplied() || (Character->JumpForceTimeRemaining > 0.0f);
+		bIsCrouched = Character->bIsCrouched;
+		
+		// 未开启线性平滑则将时间戳置零
+		if ((CharacterMovement->NetworkSmoothingMode == ENetworkSmoothingMode::Linear) || CharacterMovement->bNetworkAlwaysReplicateTransformUpdateTimestamp)
+		{
+			RepTimeStamp = CharacterMovement->GetServerLastTransformUpdateTimeStamp();
+		} else
+		{
+			RepTimeStamp = 0.f;
+		}
+		
+		return true;
+	}
 	return false;
 }
 
