@@ -39,12 +39,63 @@ bool FSharedRepMovement::FillForCharacter(ACharacter* Character)
 
 bool FSharedRepMovement::Equals(const FSharedRepMovement& Other, ACharacter* Character) const
 {
-	return false;
+	if (RepMovement.Location != Other.RepMovement.Location)
+	{
+		return false;
+	}
+	
+	if (RepMovement.Rotation != Other.RepMovement.Rotation)
+	{
+		return false;
+	}
+	
+	if (RepMovement.LinearVelocity != Other.RepMovement.LinearVelocity)
+	{
+		return false;
+	}
+	
+	if (RepMovementMode != Other.RepMovementMode)
+	{
+		return false;
+	}
+	
+	if (bProxyIsJumpForceApplied != Other.bProxyIsJumpForceApplied)
+	{
+		return false;
+	}
+	
+	if (bIsCrouched != Other.bIsCrouched)
+	{
+		return false;
+	}
+	
+	return true;
 }
 
-bool FSharedRepMovement::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bShouldSave)
+bool FSharedRepMovement::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {
-	return false;
+	bOutSuccess = true;
+	
+	// 先序列化原生同步数据（FIFO，先进先出）
+	RepMovement.NetSerialize(Ar, Map, bOutSuccess);
+	
+	Ar << RepMovementMode;
+	Ar << bProxyIsJumpForceApplied;
+	Ar << bIsCrouched;
+	
+	uint8 bHasTimeStamp = (RepTimeStamp != 0.f);
+	// 压缩为 1 bit，兼具收发功能，需要地址参数
+	Ar.SerializeBits(&bHasTimeStamp, 1);
+	if (bHasTimeStamp)
+	{
+		Ar << RepTimeStamp;
+	} else
+	{
+		// 发包无行为，收包时本地时间戳置0
+		RepTimeStamp = 0.f;
+	}
+	
+	return true;
 }
 
 ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)

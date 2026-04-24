@@ -43,7 +43,7 @@ struct FSharedRepMovement
 	bool FillForCharacter(ACharacter* Character);
 	bool Equals(const FSharedRepMovement& Other, ACharacter* Character) const;
 
-	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bShouldSave);
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 
 	UPROPERTY(Transient)
 	FRepMovement RepMovement;
