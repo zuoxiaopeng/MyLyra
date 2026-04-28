@@ -1,6 +1,12 @@
 #include "LyraCharacter.h"
 
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+
+class ULyraCharacterMovementComponent;
+
+static FName NAME_LyraCharacterCollisionProfile_Capsule(TEXT("LyraPawnCapsule"));
+static FName NAME_LyraCharacterCollisionProfile_Mesh(TEXT("LyraPawnMesh"));
 
 FSharedRepMovement::FSharedRepMovement()
 {
@@ -98,8 +104,25 @@ bool FSharedRepMovement::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool
 	return true;
 }
 
-ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
+ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer) 
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<ULyraCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
+	// 关闭 Tick， 通过组件 Tick 满足更新需要， Character 本身关闭 Tick 节省性能
+	PrimaryActorTick.bCanEverTick = false;
+	// Tick 初始状态为关闭
+	PrimaryActorTick.bStartWithTickEnabled = false;
+	
+	SetNetCullDistanceSquared(900000000.0f);
+	
+	UCapsuleComponent* CapsuleCom = GetCapsuleComponent();
+	check(CapsuleCom);
+	CapsuleCom->InitCapsuleSize(40.f, 90.f);
+	CapsuleCom->SetCollisionProfileName(NAME_LyraCharacterCollisionProfile_Capsule);
+	
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	check(MeshComp);
+	MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f)); // 左手坐标系，Mesh导入时默认 Y 轴朝向，绕 Z 逆时针旋转 90 度，设为 X 轴朝向
+	MeshComp->SetCollisionProfileName(NAME_LyraCharacterCollisionProfile_Mesh);
 }
 
 ALyraPlayerController* ALyraCharacter::GetLyraPlayerController() const
