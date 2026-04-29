@@ -6,3 +6,32 @@ ULyraCharacterMovementComponent::ULyraCharacterMovementComponent(const FObjectIn
 {
 	
 }
+
+void ULyraCharacterMovementComponent::SimulateMovement(float DeltaTime)
+{
+	Super::SimulateMovement(DeltaTime);
+}
+
+bool ULyraCharacterMovementComponent::CanAttemptJump() const
+{
+	return Super::CanAttemptJump();
+}
+
+const FLyraCharacterGroundInfo& ULyraCharacterMovementComponent::GetGroundInfo()
+{
+	return FLyraCharacterGroundInfo();
+}
+
+void ULyraCharacterMovementComponent::SetReplicatedAcceleration(const FVector& InAcceleration)
+{
+}
+
+FRotator ULyraCharacterMovementComponent::GetDeltaRotation(float DeltaTime) const
+{
+	return Super::GetDeltaRotation(DeltaTime);
+}
+
+float ULyraCharacterMovementComponent::GetMaxSpeed() const
+{
+	return Super::GetMaxSpeed();
+}

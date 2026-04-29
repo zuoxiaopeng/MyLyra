@@ -1,5 +1,6 @@
 #include "LyraCharacter.h"
 
+#include "LyraCharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -123,6 +124,9 @@ ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
 	check(MeshComp);
 	MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f)); // 左手坐标系，Mesh导入时默认 Y 轴朝向，绕 Z 逆时针旋转 90 度，设为 X 轴朝向
 	MeshComp->SetCollisionProfileName(NAME_LyraCharacterCollisionProfile_Mesh);
+	
+	ULyraCharacterMovementComponent* LyraMoveComp = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
+	LyraMoveComp->GravityScale = 1.0f;
 }
 
 ALyraPlayerController* ALyraCharacter::GetLyraPlayerController() const
