@@ -1,6 +1,9 @@
 #include "LyraCharacter.h"
 
 #include "LyraCharacterMovementComponent.h"
+#include "LyraHealthComponent.h"
+#include "LyraPawnExtensionComponent.h"
+#include "Camera/LyraCameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -127,6 +130,42 @@ ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
 	
 	ULyraCharacterMovementComponent* LyraMoveComp = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
 	LyraMoveComp->GravityScale = 1.0f;
+	LyraMoveComp->MaxAcceleration = 2400.0f;
+	LyraMoveComp->BrakingFrictionFactor = 1.0f;
+	LyraMoveComp->BrakingFriction = 6.0f;
+	LyraMoveComp->GroundFriction = 8.0f;
+	LyraMoveComp->BrakingDecelerationWalking = 1400.0f;
+	// 角色朝向跟随视角，平滑转动
+	LyraMoveComp->bUseControllerDesiredRotation = false;
+	// 角色朝向跟随移动方向
+	LyraMoveComp->bOrientRotationToMovement = false;
+	LyraMoveComp->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	// 动画期间关闭物理旋转
+	LyraMoveComp->bAllowPhysicsRotationDuringAnimRootMotion = false;
+	// 控制下蹲功能开关，可以给 bot 使用
+	LyraMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
+	// 下蹲时是否允许掉下悬崖/边缘
+	LyraMoveComp->bCanWalkOffLedgesWhenCrouching = true;
+	// 蹲下时角色胶囊体半高
+	LyraMoveComp->SetCrouchedHalfHeight(65.0f);
+	
+	PawnExtComponent = CreateDefaultSubobject<ULyraPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
+	PawnExtComponent->OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+	PawnExtComponent->OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+	
+	HealthComponent = CreateDefaultSubobject<ULyraHealthComponent>(TEXT("HealthComponent"));
+	HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
+	HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
+	
+	CameraComponent = CreateDefaultSubobject<ULyraCameraComponent>(TEXT("CameraComponent"));
+	CameraComponent->SetRelativeLocation(FVector(-300.0f, 0.0f, 75.0f));
+	
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = true;
+	bUseControllerRotationRoll = false;
+	
+	BaseEyeHeight = 80.0f;
+	CrouchedEyeHeight = 50.0f;
 }
 
 ALyraPlayerController* ALyraCharacter::GetLyraPlayerController() const
@@ -271,6 +310,10 @@ void ALyraCharacter::InitializeGameplayTags()
 void ALyraCharacter::FellOutOfWorld(const class UDamageType& dmgType)
 {
 	Super::FellOutOfWorld(dmgType);
+}
+
+void ALyraCharacter::OnDeathStarted(AActor* OwningActor)
+{
 }
 
 void ALyraCharacter::OnDeathFinished(AActor* OwningActor)

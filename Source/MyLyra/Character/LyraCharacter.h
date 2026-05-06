@@ -142,6 +142,9 @@ protected:
 	UE_API virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
 	
 	UFUNCTION()
+	UE_API virtual void OnDeathStarted(AActor* OwningActor);
+	
+	UFUNCTION()
 	UE_API virtual void OnDeathFinished(AActor* OwningActor);
 	
 	UE_API void DisableMovementAndCollision();
