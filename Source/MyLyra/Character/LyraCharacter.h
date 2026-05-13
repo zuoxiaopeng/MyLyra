@@ -88,7 +88,7 @@ public:
 	UE_API ALyraPlayerState* GetLyraPlayerState() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Lyra|Character")
-	UE_API UAbilitySystemComponent* GetLyraAbilitySystemComponent() const;
+	UE_API ULyraAbilitySystemComponent* GetLyraAbilitySystemComponent() const;
 	UE_API virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 	UE_API virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;

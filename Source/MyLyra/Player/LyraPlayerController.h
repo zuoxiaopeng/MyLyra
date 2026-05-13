@@ -6,11 +6,14 @@
 #include "GameFramework/PlayerController.h"
 #include "LyraPlayerController.generated.h"
 
+
+#define  UE_API MYLYRA_API
+
 /**
  * 
  */
-UCLASS()
-class MYLYRA_API ALyraPlayerController : public APlayerController
+UCLASS(MinimalAPI, Config = Game, Meta  = (ShortTooltip = "The base player controller class used by this project."))
+class ALyraPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	
@@ -18,3 +21,5 @@ class MYLYRA_API ALyraPlayerController : public APlayerController
 	
 	
 };
+
+#undef  UE_API

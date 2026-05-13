@@ -3,9 +3,12 @@
 #include "LyraCharacterMovementComponent.h"
 #include "LyraHealthComponent.h"
 #include "LyraPawnExtensionComponent.h"
+#include "AbilitySystem/LyraAbilitySystemComponent.h"
 #include "Camera/LyraCameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Player/LyraPlayerState.h"
+#include "Player/LyraPlayerController.h"
 
 class ULyraCharacterMovementComponent;
 
@@ -170,45 +173,79 @@ ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
 
 ALyraPlayerController* ALyraCharacter::GetLyraPlayerController() const
 {
-	return nullptr;
+	return Cast<ALyraPlayerController>(GetController());
 }
 
 ALyraPlayerState* ALyraCharacter::GetLyraPlayerState() const
 {
-	return nullptr;
+	return CastChecked<ALyraPlayerState>(GetPlayerState(), ECastCheckedType::NullAllowed);
 }
 
-UAbilitySystemComponent* ALyraCharacter::GetLyraAbilitySystemComponent() const
+ULyraAbilitySystemComponent* ALyraCharacter::GetLyraAbilitySystemComponent() const
 {
-	return nullptr;
+	return Cast<ULyraAbilitySystemComponent>(GetAbilitySystemComponent());
 }
 
 UAbilitySystemComponent* ALyraCharacter::GetAbilitySystemComponent() const
 {
-	return nullptr;
+	if (PawnExtComponent == nullptr)
+	{
+		return nullptr;
+	}
+	
+	return PawnExtComponent->GetLyraAbilitySystemComponent();
 }
 
 void ALyraCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
 {
+	if (const ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		LyraASC->GetOwnedGameplayTags(TagContainer);
+	}
 }
 
 bool ALyraCharacter::HasMatchingGameplayTag(FGameplayTag TagToCheck) const
 {
-	return IGameplayTagAssetInterface::HasMatchingGameplayTag(TagToCheck);
+	if (const ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		return LyraASC->HasMatchingGameplayTag(TagToCheck);
+	}
+	
+	return false;
 }
 
 bool ALyraCharacter::HasAllMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const
 {
-	return IGameplayTagAssetInterface::HasAllMatchingGameplayTags(TagContainer);
+	if (const ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		return LyraASC->HasAllMatchingGameplayTags(TagContainer);
+	}
+	
+	return false;
 }
 
 bool ALyraCharacter::HasAnyMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const
 {
-	return IGameplayTagAssetInterface::HasAnyMatchingGameplayTags(TagContainer);
+	if (const ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		return LyraASC->HasAnyMatchingGameplayTags(TagContainer);
+	}
+	
+	return false;
 }
 
 void ALyraCharacter::ToggleCrouch()
 {
+	const ULyraCharacterMovementComponent* LyraMoveCom = CastChecked<ULyraCharacterMovementComponent>(GetMovementComponent());
+	
+	if (IsCrouched() || LyraMoveCom->bWantsToCrouch)
+	{
+		UnCrouch();
+	} 
+	else if (LyraMoveCom->IsMovingOnGround())
+	{
+		Crouch();
+	}
 }
 
 void ALyraCharacter::PreInitializeComponents()
