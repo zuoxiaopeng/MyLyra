@@ -2,13 +2,16 @@
 
 #include "LyraCharacterMovementComponent.h"
 #include "LyraHealthComponent.h"
+#include "LyraLogChannels.h"
 #include "LyraPawnExtensionComponent.h"
 #include "AbilitySystem/LyraAbilitySystemComponent.h"
 #include "Camera/LyraCameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/LyraPlayerState.h"
 #include "Player/LyraPlayerController.h"
+#include "System/LyraSignificanceManager.h"
 
 class ULyraCharacterMovementComponent;
 
@@ -256,50 +259,130 @@ void ALyraCharacter::PreInitializeComponents()
 void ALyraCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	UWorld* World = GetWorld();
+	
+	const bool bRegisterWithSignificanceManager = !IsNetMode(NM_DedicatedServer);
+	if (bRegisterWithSignificanceManager)
+	{
+		if (ULyraSignificanceManager* SignificanceManager = USignificanceManager::Get<ULyraSignificanceManager>(World))
+		{
+			
+		}
+	}
 }
 
 void ALyraCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+	
+	UWorld* World = GetWorld();
+	
+	const bool bRegisterWithSignificanceManager = !IsNetMode(NM_DedicatedServer);
+	if (bRegisterWithSignificanceManager)
+	{
+		if (ULyraSignificanceManager* SignificanceManager = USignificanceManager::Get<ULyraSignificanceManager>(World))
+		{
+			SignificanceManager->UnregisterObject(this);
+		}
+	}
 }
 
 void ALyraCharacter::Reset()
 {
-	Super::Reset();
+	DisableMovementAndCollision();
+	
+	// K2_ (Kismet 2，蓝图的前身) 开头的 C++ 方法，都意味着它是一个 专供蓝图实现（BlueprintImplementableEvent）的钩子函数。
+	K2_OnReset();
+	
+	UninitAndDestroy();
 }
 
 void ALyraCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME_CONDITION(ThisClass, ReplicatedAcceleration, COND_SimulatedOnly);
+	DOREPLIFETIME(ThisClass, MyTeamID);
 }
 
 void ALyraCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
 {
 	Super::PreReplication(ChangedPropertyTracker);
+	
+	if (const UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+	{
+		const double MaxAccel = MovementComponent->GetMaxAcceleration();
+		const FVector CurrentAccel = MovementComponent->GetCurrentAcceleration();
+		double AccelXYRadians, AccelXYMagnitude;
+		// 笛卡尔坐标系转换为极坐标系
+		FMath::CartesianToPolar(CurrentAccel.X, CurrentAccel.Y, AccelXYMagnitude, AccelXYRadians);
+		
+		ReplicatedAcceleration.AccelXYRadians   = FMath::FloorToInt((AccelXYRadians / TWO_PI) * 255.0);
+		ReplicatedAcceleration.AccelXYMagnitude = FMath::FloorToInt((AccelXYMagnitude / MaxAccel) * 255.0);
+		ReplicatedAcceleration.AccelZ           = FMath::FloorToInt((CurrentAccel.Z / MaxAccel) * 127.0);
+	}
 }
 
 void ALyraCharacter::NotifyControllerChanged()
 {
+	// Character 上记录的 TeamID
+	const FGenericTeamId OldTeamID = GetGenericTeamId();
+	
 	Super::NotifyControllerChanged();
+	
+	if (HasAuthority() && (GetController() != nullptr))
+	{
+		if (ILyraTeamAgentInterface* ControllerWithTeam = Cast<ILyraTeamAgentInterface>(GetController()))
+		{
+			// 当前绑定的 PlayerController 的 TeamID
+			MyTeamID = ControllerWithTeam->GetGenericTeamId();
+			ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+		}
+	}
 }
 
-void ALyraCharacter::SetGenericTeamId(const FGenericTeamId& TeamID)
+void ALyraCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
-	ILyraTeamAgentInterface::SetGenericTeamId(TeamID);
+	if (GetController() == nullptr)
+	{
+		if (HasAuthority())
+		{
+			const FGenericTeamId OldTeamID = MyTeamID;
+			MyTeamID = NewTeamID;
+			ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+		} 
+		else
+		{
+			UE_LOG(LogLyraTeams, Error, TEXT("You can't set team ID on a character (%s) expect on the authority"), *GetPathNameSafe(this));	
+		}
+	}
+	else
+	{
+		UE_LOG(LogLyra, Error, TEXT("You can't set team ID on a character (%s); it's driven by  the associated controller"), *GetPathNameSafe(this));
+	}
 }
 
 FGenericTeamId ALyraCharacter::GetGenericTeamId() const
 {
-	return ILyraTeamAgentInterface::GetGenericTeamId();
+	return MyTeamID;
 }
 
+// 外部应仅Bind，不应BroadCast
 FOnLyraTeamIndexChangedDelegate* ALyraCharacter::GetOnTeamIndexChangedDelegate()
 {
-	return ILyraTeamAgentInterface::GetOnTeamIndexChangedDelegate();
+	return &OnTeamChangedDelegate;
 }
 
 void ALyraCharacter::FastSharedReplication_Implementation(const FSharedRepMovement& SharedRepMovement)
 {
+	// 是否处于回放模式
+	if (GetWorld()->IsPlayingReplay())
+	{
+		return;
+	}
+	
+	
 }
 
 bool ALyraCharacter::UpdateSharedReplication()

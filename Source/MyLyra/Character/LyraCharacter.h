@@ -112,7 +112,7 @@ public:
 	//~End of APawn interface
 	
 	//~ILyraTeamAgentInterface interface
-	UE_API virtual void SetGenericTeamId(const FGenericTeamId& TeamID) override;
+	UE_API virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 	UE_API virtual FGenericTeamId GetGenericTeamId() const override;
 	UE_API virtual FOnLyraTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
 	//~End of ILyraTeamAgentInterface interface
