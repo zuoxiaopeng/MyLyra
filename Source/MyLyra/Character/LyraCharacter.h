@@ -155,7 +155,7 @@ protected:
 	UE_API void K2_OnDeathFinished();
 	
 	UE_API virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
-	UE_API void SetMovementModeTag(EMovementMode MovementMode, uint8 PreviousCustomMode);
+	UE_API void SetMovementModeTag(EMovementMode MovementMode, uint8 CustomMovementMod, bool bTagEnabled);
 	
 	UE_API virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	UE_API virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

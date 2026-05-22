@@ -9,3 +9,16 @@ ULyraHealthComponent::ULyraHealthComponent(const FObjectInitializer& ObjectIniti
 	SetIsReplicatedByDefault(true);
 	
 }
+
+void ULyraHealthComponent::StartDeath()
+{
+}
+
+void ULyraHealthComponent::FinishDeath()
+{
+}
+
+void ULyraHealthComponent::DamageSelfDestruct(bool bFellOutOfWorld)
+{
+	
+}

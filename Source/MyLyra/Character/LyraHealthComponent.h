@@ -14,7 +14,12 @@ class ULyraHealthComponent : public UGameFrameworkComponent
 	
 public:
 	UE_API ULyraHealthComponent(const FObjectInitializer& ObjectInitializer);
-	//TODO: 补全内容
+	
+	UE_API virtual void StartDeath();
+	
+	UE_API virtual void FinishDeath();
+	
+	UE_API virtual void DamageSelfDestruct(bool bFellOutOfWorld = false);
 	
 public:
 	UPROPERTY(BlueprintAssignable)

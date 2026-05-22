@@ -19,12 +19,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Lyra|Pawn")
 	ULyraAbilitySystemComponent* GetLyraAbilitySystemComponent() const { return AbilitySystemComponent; }
 	
+	UE_API void InitializeAbilitySystem();
+	
+	UE_API void UninitializeAbilitySystem();
+	
+	UE_API void HandleControllerChanged();
+	
+	UE_API void HandlePlayerStateReplicated();
+	
+	UE_API void SetupPlayerInputComponent();
 	
 	UE_API void OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate Delegate);
 	
 	UE_API void OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate Delegate);
-
-	
 	
 protected:
 	

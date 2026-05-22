@@ -1,6 +1,7 @@
 #include "LyraCharacter.h"
 
 #include "LyraCharacterMovementComponent.h"
+#include "LyraGameplayTags.h"
 #include "LyraHealthComponent.h"
 #include "LyraLogChannels.h"
 #include "LyraPawnExtensionComponent.h"
@@ -382,83 +383,225 @@ void ALyraCharacter::FastSharedReplication_Implementation(const FSharedRepMoveme
 		return;
 	}
 	
-	
+	if (GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		// 时间戳
+		SetReplicatedServerLastTransformUpdateTimeStamp(SharedRepMovement.RepTimeStamp);
+		
+		// 移动模式
+		if (GetReplicatedMovementMode() != SharedRepMovement.RepMovementMode)
+		{
+			SetReplicatedMovementMode(SharedRepMovement.RepMovementMode);
+			GetCharacterMovement()->bNetworkMovementModeChanged = true;
+			GetCharacterMovement()->bNetworkUpdateReceived = true;
+		}
+		
+		// 位置、旋转、速度等
+		FRepMovement& MutableRepMovement = GetReplicatedMovement_Mutable();
+		MutableRepMovement = SharedRepMovement.RepMovement;
+		
+		// 先落位再变形（蹲下等）
+		OnRep_ReplicatedMovement();
+		
+		SetProxyIsJumpForceApplied(SharedRepMovement.bProxyIsJumpForceApplied);
+		
+		if (IsCrouched() != SharedRepMovement.bIsCrouched)
+		{
+			SetIsCrouched(SharedRepMovement.bIsCrouched);
+			OnRep_IsCrouched();
+		}
+	}
 }
 
 bool ALyraCharacter::UpdateSharedReplication()
 {
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FSharedRepMovement SharedMovement;
+		if (SharedMovement.FillForCharacter(this))
+		{
+			if (!SharedMovement.Equals(LastSharedReplication, this))
+			{
+				LastSharedReplication = SharedMovement;
+				SetReplicatedMovementMode(SharedMovement.RepMovementMode);
+				
+				FastSharedReplication(SharedMovement);
+			}
+			return true;
+		}
+	}
 	return false;
 }
 
 void ALyraCharacter::OnAbilitySystemInitialized()
 {
+	ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent();
+	check(LyraASC);
+	
+	HealthComponent->InitializeComponent();
+	InitializeGameplayTags();
 }
 
 void ALyraCharacter::OnAbilitySystemUnInitialized()
 {
+	HealthComponent->UninitializeComponent();
 }
 
 void ALyraCharacter::PossessedBy(AController* NewController)
 {
+	FGenericTeamId OldTeamID = MyTeamID;
+	
 	Super::PossessedBy(NewController);
+	
+	if (ILyraTeamAgentInterface* ControllerAsTeamProvider = Cast<ILyraTeamAgentInterface>(NewController))
+	{
+		MyTeamID = ControllerAsTeamProvider->GetGenericTeamId();
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().AddDynamic(this, &ThisClass::OnControllerChangedTeam);
+	}
+	ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
 }
 
 void ALyraCharacter::UnPossessed()
 {
+	AController* OldController = GetController();
+	
+	const FGenericTeamId OldTeamID = MyTeamID;
+	if (ILyraTeamAgentInterface* ControllerAsTeamProvider = Cast<ILyraTeamAgentInterface>(GetController()))
+	{
+		ControllerAsTeamProvider->GetOnTeamIndexChangedDelegate()->RemoveAll(this);
+	}
+	
 	Super::UnPossessed();
+	
+	PawnExtComponent->HandleControllerChanged();
+	
+	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
+	ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
 }
 
 void ALyraCharacter::OnRep_Controller()
 {
 	Super::OnRep_Controller();
+	
+	PawnExtComponent->HandleControllerChanged();
 }
 
 void ALyraCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
+	
+	PawnExtComponent->HandlePlayerStateReplicated();
 }
 
 void ALyraCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	
+	PawnExtComponent->SetupPlayerInputComponent();
 }
 
 void ALyraCharacter::InitializeGameplayTags()
 {
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		for (const TPair<uint8, FGameplayTag>& TagMapping : LyraGameplayTags::MovementModeTagMap)
+		{
+			if (TagMapping.Value.IsValid())
+			{
+				LyraASC->SetLooseGameplayTagCount(TagMapping.Value, 0);
+			}
+		}
+		
+		for (const TPair<uint8, FGameplayTag>& TagMapping : LyraGameplayTags::CustomMovementModeTagMap)
+		{
+			if (TagMapping.Value.IsValid())
+			{
+				LyraASC->SetLooseGameplayTagCount(TagMapping.Value, 0);
+			}
+		}
+		
+		ULyraCharacterMovementComponent* LyraMoveCom = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
+		SetMovementModeTag(LyraMoveCom->MovementMode, LyraMoveCom->CustomMovementMode, true);
+	}
 }
 
 void ALyraCharacter::FellOutOfWorld(const class UDamageType& dmgType)
 {
-	Super::FellOutOfWorld(dmgType);
+	HealthComponent->DamageSelfDestruct(/*bFellOutOfWorld*/ true);
 }
 
 void ALyraCharacter::OnDeathStarted(AActor* OwningActor)
 {
+	DisableMovementAndCollision();
 }
 
 void ALyraCharacter::OnDeathFinished(AActor* OwningActor)
 {
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::DestroyDueToDeath);
 }
 
 void ALyraCharacter::DisableMovementAndCollision()
 {
+	if (GetController())
+	{
+		GetController()->SetIgnoreMoveInput(true);
+	}
 }
 
 void ALyraCharacter::DestroyDueToDeath()
 {
+	K2_OnDeathFinished();
+	
+	UninitAndDestroy();
 }
 
 void ALyraCharacter::UninitAndDestroy()
 {
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(0.1);
+	}
+	
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		if (LyraASC->GetAvatarActor() == this)
+		{
+			PawnExtComponent->UninitializeAbilitySystem();
+		}
+	}
+	
+	SetActorHiddenInGame(true);
 }
 
 void ALyraCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	
+	ULyraCharacterMovementComponent* LyraMoveCom = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
+	SetMovementModeTag(PrevMovementMode, PreviousCustomMode, false);
+	SetMovementModeTag(LyraMoveCom->MovementMode, LyraMoveCom->CustomMovementMode, true);
 }
 
-void ALyraCharacter::SetMovementModeTag(EMovementMode MovementMode, uint8 PreviousCustomMode)
+void ALyraCharacter::SetMovementModeTag(EMovementMode MovementMode, uint8 CustomMovementMod, bool bTagEnabled)
 {
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		const FGameplayTag* MovementModeTag = nullptr;
+		if (MovementMode == MOVE_Custom)
+		{
+			MovementModeTag = LyraGameplayTags::CustomMovementModeTagMap.Find(MovementMode);
+		}
+		else
+		{
+			MovementModeTag = LyraGameplayTags::MovementModeTagMap.Find(MovementMode);
+		}
+		
+		if (MovementModeTag && MovementModeTag->IsValid())
+		{
+			LyraASC->SetLooseGameplayTagCount(*MovementModeTag, (bTagEnabled ? 1 : 0));
+		}
+	}
 }
 
 void ALyraCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
