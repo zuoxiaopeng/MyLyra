@@ -3,7 +3,9 @@
 #include "AbilitySystem/LyraAbilitySystemComponent.h"
 
 ULyraPawnExtensionComponent::ULyraPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
+	
 }
 
 void ULyraPawnExtensionComponent::InitializeAbilitySystem()

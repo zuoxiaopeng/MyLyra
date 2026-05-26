@@ -7,7 +7,7 @@
 #include "LyraPlayerController.generated.h"
 
 
-#define  UE_API MYLYRA_API
+#define UE_API MYLYRA_API
 
 /**
  * 
@@ -22,4 +22,4 @@ class ALyraPlayerController : public APlayerController
 	
 };
 
-#undef  UE_API
+#undef UE_API

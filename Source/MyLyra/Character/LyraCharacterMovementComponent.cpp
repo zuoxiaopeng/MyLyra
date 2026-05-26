@@ -1,4 +1,3 @@
-#include "E:\UnrealEngine-5.7\Engine\Intermediate\Build\Win64\x64\UnrealEditorGPF\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.ValExpApi.Cpp20.h"
 #include "LyraCharacterMovementComponent.h"
 
 ULyraCharacterMovementComponent::ULyraCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
@@ -19,7 +18,7 @@ bool ULyraCharacterMovementComponent::CanAttemptJump() const
 
 const FLyraCharacterGroundInfo& ULyraCharacterMovementComponent::GetGroundInfo()
 {
-	return FLyraCharacterGroundInfo();
+	return CachedGroundInfo;
 }
 
 void ULyraCharacterMovementComponent::SetReplicatedAcceleration(const FVector& InAcceleration)
@@ -34,4 +33,9 @@ FRotator ULyraCharacterMovementComponent::GetDeltaRotation(float DeltaTime) cons
 float ULyraCharacterMovementComponent::GetMaxSpeed() const
 {
 	return Super::GetMaxSpeed();
+}
+
+void ULyraCharacterMovementComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
 }

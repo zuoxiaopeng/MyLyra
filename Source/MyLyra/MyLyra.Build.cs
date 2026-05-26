@@ -25,7 +25,8 @@ public class MyLyra : ModuleRules
 			"ModularGameplay",
 			"ModularGameplayActors",
 			"AIModule",
-			"SignificanceManager"
+			"SignificanceManager",
+			"GameplayTasks",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

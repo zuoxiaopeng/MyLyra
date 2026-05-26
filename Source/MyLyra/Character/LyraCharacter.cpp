@@ -616,7 +616,7 @@ void ALyraCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeigh
 
 void ALyraCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent()
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
 	{
 		LyraASC->SetLooseGameplayTagCount(LyraGameplayTags::Status_Crouching, 0);
 	}

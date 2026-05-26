@@ -1,8 +1,8 @@
 #pragma once
 #include "AbilitySystemComponent.h"
+#include "LyraAbilitySystemComponent.generated.h"
 
-
-#define  UE_API MYLYRA_API
+#define UE_API MYLYRA_API
 
 UCLASS(MinimalAPI)
 class ULyraAbilitySystemComponent : public UAbilitySystemComponent
@@ -14,4 +14,4 @@ public:
 	
 };
 
-#undef  UE_API
+#undef UE_API
