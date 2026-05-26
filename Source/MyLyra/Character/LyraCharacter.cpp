@@ -338,7 +338,7 @@ void ALyraCharacter::NotifyControllerChanged()
 		{
 			// 当前绑定的 PlayerController 的 TeamID
 			MyTeamID = ControllerWithTeam->GetGenericTeamId();
-			ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+			ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 		}
 	}
 }
@@ -351,7 +351,7 @@ void ALyraCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 		{
 			const FGenericTeamId OldTeamID = MyTeamID;
 			MyTeamID = NewTeamID;
-			ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+			ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 		} 
 		else
 		{
@@ -458,7 +458,7 @@ void ALyraCharacter::PossessedBy(AController* NewController)
 		MyTeamID = ControllerAsTeamProvider->GetGenericTeamId();
 		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().AddDynamic(this, &ThisClass::OnControllerChangedTeam);
 	}
-	ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
 void ALyraCharacter::UnPossessed()
@@ -476,7 +476,7 @@ void ALyraCharacter::UnPossessed()
 	PawnExtComponent->HandleControllerChanged();
 	
 	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
-	ConditionalBroadcastTeamIndexChanged(this, OldTeamID, MyTeamID);
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
 void ALyraCharacter::OnRep_Controller()
@@ -606,27 +606,54 @@ void ALyraCharacter::SetMovementModeTag(EMovementMode MovementMode, uint8 Custom
 
 void ALyraCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent())
+	{
+		LyraASC->SetLooseGameplayTagCount(LyraGameplayTags::Status_Crouching, 1);
+	}
+	
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 }
 
 void ALyraCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
+	if (ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent()
+	{
+		LyraASC->SetLooseGameplayTagCount(LyraGameplayTags::Status_Crouching, 0);
+	}
+	
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 }
 
 bool ALyraCharacter::CanJumpInternal_Implementation() const
 {
-	return Super::CanJumpInternal_Implementation();
+	// 和原生实现相同，但省略了蹲伏检测
+	return JumpIsAllowedInternal();
 }
 
 void ALyraCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
 {
+	const FGenericTeamId MyOldTeamID = MyTeamID;
+	MyTeamID = IntegerToGenericTeamId(NewTeam);
+	ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
 }
 
 void ALyraCharacter::OnRep_ReplicatedAcceleration()
 {
+	if (ULyraCharacterMovementComponent* LyraMovementComponent = Cast<ULyraCharacterMovementComponent>(GetMovementComponent()))
+	{
+		const double MaxAccel         = LyraMovementComponent->GetMaxAcceleration();
+		const double AccelXYMagnitude = double(ReplicatedAcceleration.AccelXYMagnitude) * MaxAccel / 255.0;
+		const double AccelXYRadians   = double(ReplicatedAcceleration.AccelXYRadians) * TWO_PI / 255;
+		
+		FVector UnpackedAcceleration(FVector::ZeroVector);
+		FMath::PolarToCartesian(AccelXYMagnitude, AccelXYRadians, UnpackedAcceleration.X, UnpackedAcceleration.Y);
+		UnpackedAcceleration.Z = double(ReplicatedAcceleration.AccelZ) * MaxAccel / 127.0;
+		
+		LyraMovementComponent->SetReplicatedAcceleration(UnpackedAcceleration);
+	}
 }
 
 void ALyraCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
 {
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }

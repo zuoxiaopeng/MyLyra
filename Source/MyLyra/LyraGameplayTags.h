@@ -8,4 +8,6 @@ namespace LyraGameplayTags
 	
 	MYLYRA_API extern const TMap<uint8, FGameplayTag> MovementModeTagMap;
 	MYLYRA_API extern const TMap<uint8, FGameplayTag> CustomMovementModeTagMap;
+	
+	MYLYRA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Crouching);
 }

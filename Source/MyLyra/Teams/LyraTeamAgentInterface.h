@@ -34,7 +34,7 @@ class ILyraTeamAgentInterface : public IGenericTeamAgentInterface
 public:
 	virtual FOnLyraTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() { return nullptr; }
 
-	static UE_API void ConditionalBroadcastTeamIndexChanged(TScriptInterface<ILyraTeamAgentInterface> This, FGenericTeamId OldTeamID, FGenericTeamId NewTeamID);
+	static UE_API void ConditionalBroadcastTeamChanged(TScriptInterface<ILyraTeamAgentInterface> This, FGenericTeamId OldTeamID, FGenericTeamId NewTeamID);
 
 	FOnLyraTeamIndexChangedDelegate& GetTeamChangedDelegateChecked()
 	{
