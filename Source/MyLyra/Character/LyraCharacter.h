@@ -12,6 +12,8 @@
 
 #define UE_API MYLYRA_API
 
+class ULyraAbilitySystemComponent;
+class ALyraPlayerState;
 class ULyraCameraComponent;
 class ULyraHealthComponent;
 class ALyraPlayerController;
@@ -71,6 +73,16 @@ struct  TStructOpsTypeTraits<FSharedRepMovement> : public TStructOpsTypeTraitsBa
 	};
 };
 
+
+
+/**
+ * ALyraCharacter
+ * 
+ * 此项目基础角色类型
+ * 负责发送事件给pawn组件
+ * 新功能需要尽可能通过新增pawn组件来实现
+ * 
+ */
 UCLASS(MinimalAPI, Config = Game, Meta = (ShortTooltip = "The base character pawn class used by this project."))
 class ALyraCharacter : public AModularCharacter,
 	public IAbilitySystemInterface, public IGameplayCueInterface,
@@ -89,6 +101,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Lyra|Character")
 	UE_API ULyraAbilitySystemComponent* GetLyraAbilitySystemComponent() const;
+	
 	UE_API virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 	UE_API virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;

@@ -14,3 +14,4 @@ class AModularPlayerState : public APlayerState
 	
 };
 
+#undef UE_API

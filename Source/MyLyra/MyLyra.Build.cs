@@ -15,10 +15,10 @@ public class MyLyra : ModuleRules
 		);
 
 		PublicDependencyModuleNames.AddRange(new string[] {
-			"Core", 
-			"CoreUObject", 
-			"Engine", 
-			"InputCore", 
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
 			"EnhancedInput",
 			"GameplayTags",
 			"GameplayAbilities",
@@ -27,6 +27,10 @@ public class MyLyra : ModuleRules
 			"AIModule",
 			"SignificanceManager",
 			"GameplayTasks",
+			"CommonGame",
+			"Puerts",
+			"JsEnv",
+			"GameplayMessageRuntime"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
