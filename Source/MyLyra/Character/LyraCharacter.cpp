@@ -125,16 +125,19 @@ ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
 	
 	SetNetCullDistanceSquared(900000000.0f);
 	
+	// 初始化胶囊体组件
 	UCapsuleComponent* CapsuleCom = GetCapsuleComponent();
 	check(CapsuleCom);
 	CapsuleCom->InitCapsuleSize(40.f, 90.f);
 	CapsuleCom->SetCollisionProfileName(NAME_LyraCharacterCollisionProfile_Capsule);
 	
+	// 初始化骨骼网格组件
 	USkeletalMeshComponent* MeshComp = GetMesh();
 	check(MeshComp);
 	MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f)); // 左手坐标系，Mesh导入时默认 Y 轴朝向，绕 Z 逆时针旋转 90 度，设为 X 轴朝向
 	MeshComp->SetCollisionProfileName(NAME_LyraCharacterCollisionProfile_Mesh);
 	
+	// 初始化运动组件
 	ULyraCharacterMovementComponent* LyraMoveComp = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
 	LyraMoveComp->GravityScale = 1.0f;
 	LyraMoveComp->MaxAcceleration = 2400.0f;
@@ -156,21 +159,28 @@ ALyraCharacter::ALyraCharacter(const FObjectInitializer& ObjectInitializer)
 	// 蹲下时角色胶囊体半高
 	LyraMoveComp->SetCrouchedHalfHeight(65.0f);
 	
+	// 客户端的 `Controller`、`PlayerState` 和 `Pawn` 的到达顺序是完全随机的。如果在错误的时机初始化 GAS，会导致各种空指针或状态不同步。
+	// Lyra 的解法：角色类提供一组“感知方法”，将状态变化无脑汇报给 `PawnExtensionComponent`，由它来统筹，直到所有依赖就绪，再回调 `OnAbilitySystemInitialized`
 	PawnExtComponent = CreateDefaultSubobject<ULyraPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
+	// 门面模式，保证无论在 ASC 就绪前绑定还是就绪后绑定，都能够触发回调
 	PawnExtComponent->OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
-	PawnExtComponent->OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+	PawnExtComponent->OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUnInitialized));
 	
+	// 初始化生命组件
 	HealthComponent = CreateDefaultSubobject<ULyraHealthComponent>(TEXT("HealthComponent"));
 	HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
 	HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
 	
+	// 初始化相机组件
 	CameraComponent = CreateDefaultSubobject<ULyraCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->SetRelativeLocation(FVector(-300.0f, 0.0f, 75.0f));
 	
+	// 只允许角色沿z轴旋转
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 	
+	// 初始化视角高度
 	BaseEyeHeight = 80.0f;
 	CrouchedEyeHeight = 50.0f;
 }
@@ -438,13 +448,13 @@ void ALyraCharacter::OnAbilitySystemInitialized()
 	ULyraAbilitySystemComponent* LyraASC = GetLyraAbilitySystemComponent();
 	check(LyraASC);
 	
-	HealthComponent->InitializeComponent();
+	HealthComponent->InitializeWithAbilitySystem(LyraASC);
 	InitializeGameplayTags();
 }
 
 void ALyraCharacter::OnAbilitySystemUnInitialized()
 {
-	HealthComponent->UninitializeComponent();
+	HealthComponent->UnInitializeFromAbilitySystem();
 }
 
 void ALyraCharacter::PossessedBy(AController* NewController)
@@ -452,6 +462,8 @@ void ALyraCharacter::PossessedBy(AController* NewController)
 	FGenericTeamId OldTeamID = MyTeamID;
 	
 	Super::PossessedBy(NewController);
+	
+	PawnExtComponent->HandleControllerChanged();
 	
 	if (ILyraTeamAgentInterface* ControllerAsTeamProvider = Cast<ILyraTeamAgentInterface>(NewController))
 	{
@@ -468,7 +480,7 @@ void ALyraCharacter::UnPossessed()
 	const FGenericTeamId OldTeamID = MyTeamID;
 	if (ILyraTeamAgentInterface* ControllerAsTeamProvider = Cast<ILyraTeamAgentInterface>(GetController()))
 	{
-		ControllerAsTeamProvider->GetOnTeamIndexChangedDelegate()->RemoveAll(this);
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().RemoveAll(this);
 	}
 	
 	Super::UnPossessed();
@@ -546,6 +558,18 @@ void ALyraCharacter::DisableMovementAndCollision()
 	{
 		GetController()->SetIgnoreMoveInput(true);
 	}
+	
+	// 关闭胶囊体碰撞
+	UCapsuleComponent* CapsuleCom = GetCapsuleComponent();
+	check(CapsuleCom);
+	CapsuleCom->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 边缘场景安全网（Safety Net）
+	CapsuleCom->SetCollisionResponseToAllChannels(ECR_Ignore);
+	
+	// 关闭运动组件
+	ULyraCharacterMovementComponent* LyraMoveComp = CastChecked<ULyraCharacterMovementComponent>(GetCharacterMovement());
+	LyraMoveComp->StopMovementImmediately();
+	LyraMoveComp->DisableMovement();
 }
 
 void ALyraCharacter::DestroyDueToDeath()
@@ -590,7 +614,7 @@ void ALyraCharacter::SetMovementModeTag(EMovementMode MovementMode, uint8 Custom
 		const FGameplayTag* MovementModeTag = nullptr;
 		if (MovementMode == MOVE_Custom)
 		{
-			MovementModeTag = LyraGameplayTags::CustomMovementModeTagMap.Find(MovementMode);
+			MovementModeTag = LyraGameplayTags::CustomMovementModeTagMap.Find(CustomMovementMod);
 		}
 		else
 		{

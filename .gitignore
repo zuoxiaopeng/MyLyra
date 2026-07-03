@@ -1,8 +1,9 @@
 # Unreal Engine .gitignore
 
-# Builds and generated folders
+# Builds, generated folders and local assets
 Binaries/
 Build/
+Content/
 DerivedDataCache/
 Intermediate/
 Saved/
@@ -28,3 +29,19 @@ Saved/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Node / TypeScript dependencies and caches
+node_modules/
+
+# Puerts generated/cache files
+.v8flags.*
+ts_file_versions_info.json
+Plugins/Puerts/ThirdParty/
+Plugins/Puerts/**/obj/
+
+# Local archives / downloaded SDK packages
+*.tgz
+*.tar.gz
+*.zip
+*.7z
+*.rar

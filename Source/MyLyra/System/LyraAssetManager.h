@@ -25,7 +25,7 @@ protected:
 	template<typename GameDataClass>
 	const GameDataClass& GetOrLoadTypedGameData(const TSoftObjectPtr<GameDataClass>& DataPath)
 	{
-		if (const TObjectPtr<UPrimaryDataAsset>* pResult = GameDataMap.Find(GameDataClass::StaticClass))
+		if (const TObjectPtr<UPrimaryDataAsset>* pResult = GameDataMap.Find(GameDataClass::StaticClass()))
 		{
 			return *CastChecked<GameDataClass>(*pResult);
 		}

@@ -2,6 +2,10 @@
 
 #include "LyraLogChannels.h"
 
+ULyraAssetManager::ULyraAssetManager()
+{
+}
+
 ULyraAssetManager& ULyraAssetManager::Get()
 {
 	check(GEngine);

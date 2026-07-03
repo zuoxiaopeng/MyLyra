@@ -53,7 +53,7 @@ protected:
 	
 	UE_API virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 	UE_API virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
-	UE_API virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override; 
+	UE_API virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 	
 	UE_API void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
 	
@@ -82,7 +82,6 @@ private:
 	
 	UPROPERTY(BlueprintReadOnly, Category="Lyra|Health", Meta=(HideFromModifiers, AllowPrivateAccess=true))
 	FGameplayAttributeData Damage;
-	
 };
 
 #undef UE_API

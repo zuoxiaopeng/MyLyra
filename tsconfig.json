@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "experimentalDecorators": true,
+    "jsx": "react",
+    "sourceMap": true,
+    "typeRoots": [
+      "Typing",
+      "./node_modules/@types"
+    ],
+    "outDir": "Content/JavaScript",
+    "rootDir": "TypeScript"
+  },
+  "include": [
+    "TypeScript/**/*"
+  ]
+}

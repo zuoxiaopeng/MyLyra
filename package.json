@@ -1,0 +1,24 @@
+{
+  "name": "mylyra",
+  "version": "1.0.0",
+  "description": "Lyra Retype",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zuoxiaopeng/MyLyra.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zuoxiaopeng/MyLyra/issues"
+  },
+  "homepage": "https://github.com/zuoxiaopeng/MyLyra#readme",
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
