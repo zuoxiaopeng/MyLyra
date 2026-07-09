@@ -4,3 +4,12 @@ ULyraAbilitySystemComponent::ULyraAbilitySystemComponent(const FObjectInitialize
 {
 	
 }
+
+void ULyraAbilitySystemComponent::SetTagRelationshipMapping(ULyraAbilityTagRelationshipMapping* NewMapping)
+{
+}
+
+void ULyraAbilitySystemComponent::ClearAbilityInput()
+{
+	
+}
